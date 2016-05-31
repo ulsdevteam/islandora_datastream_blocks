@@ -1,0 +1,87 @@
+<?php
+
+
+/**
+ * Implements hook_menu().
+ */
+function islandora_datastream_blocks_menu () {
+  $items = array();
+  $items['admin/islandora/tools/islandora_datastream_blocks'] = array(
+    'title' => 'Islandora Datastream Blocks',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('islandora_datastream_blocks_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'includes/admin.form.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );  
+ return $items;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function islandora_datastream_blocks_block_info() {
+    $block_dsids = variable_get('islandora_datastream_blocks_block_dsids', '');
+    $block_dsids_arr = explode(",", $block_dsids);
+    $b = array();
+    foreach ($block_dsids_arr as $block_dsid) {
+        $bid = trim($block_dsid);
+        $blocks['idb-'.$bid] = array(  
+            'info' => t('Islandora Datastream Block {'.$bid.'}'),
+            'cache' => DRUPAL_CACHE_PER_PAGE,
+        );
+        $b[] = $block_dsid;
+    }
+    return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function islandora_datastream_blocks_block_view($delta = '') {
+    if ($delta == "*uninitialized*") { exit; }
+    if (strstr($delta, 'idb-') <> '') {
+        $block = array();
+        $dsid = str_replace('idb-', '', $delta);
+        include_once('sites/all/modules/islandora/includes/tuque.inc');
+
+        $item = menu_get_item();
+        if (isset($item['page_arguments'][0]) && is_object($item['page_arguments'][0]) && (get_class($item['page_arguments'][0]) == 'IslandoraFedoraObject')) {
+            $fedora_object = $item['page_arguments'][0];
+            $connection = islandora_get_tuque_connection();
+            if ($connection) {
+                try {
+                    $info = $connection->api->a->describeRepository();
+                    // If we are able to successfully call API-M::getDatastream, assume we are
+                    // an authenticated user, as API-M is usally locked down.
+                    $datastream = $fedora_object[$dsid];
+                    $file_text = '';
+                    if (($datastream) && (is_object($datastream))) {
+                        $tempFilename = tempnam("/tmp", "DS_html_");
+
+                        $datastream->getContent($tempFilename);
+                        $file_text = implode("", file($tempFilename));
+                        @unlink($tempFilename);
+                    }
+                    // blank title so that it doesn't cause a big h3 
+                    $block['subject'] = ''; 
+                    $block['content'] =  theme('datastream_block',array('datastream_contents' => $file_text));
+                    return $block;
+                } catch (Exception $e) {
+                    exit;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function islandora_datastream_blocks_theme() {
+  return array(
+    'datastream_block' => array(
+      'template' => 'templates/datastream_block',
+    )
+  );
+}

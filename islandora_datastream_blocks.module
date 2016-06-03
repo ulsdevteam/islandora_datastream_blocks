@@ -55,17 +55,35 @@ function islandora_datastream_blocks_block_view($delta = '') {
                     // If we are able to successfully call API-M::getDatastream, assume we are
                     // an authenticated user, as API-M is usally locked down.
                     $datastream = $fedora_object[$dsid];
-                    $file_text = '';
+                    $content = '';
                     if (($datastream) && (is_object($datastream))) {
-                        $tempFilename = tempnam("/tmp", "DS_html_");
-
-                        $datastream->getContent($tempFilename);
-                        $file_text = implode("", file($tempFilename));
-                        @unlink($tempFilename);
+                      // handle the various types of content there, the default will be rendered as straight text
+                      switch ($datastream->mimetype) {
+                        case 'image/jpeg':
+                        case 'image/jpg':
+                        case 'image/gif':
+                        case 'image/png':
+                          if (isset($fedora_object[$dsid])) {
+                            $collection_tn_url = url("islandora/object/{$fedora_object->id}/datastream/{$dsid}/view");
+                            $params = array(
+                              'title' => $fedora_object->label,
+                              'alt' => $fedora_object->label,
+                              'path' => $collection_tn_url);
+                            $content = theme('image', $params);                          
+                          }
+                          break;
+                        default:
+                          $tempFilename = tempnam("/tmp", "DS_html_");
+                          $datastream->getContent($tempFilename);
+                          $content = implode("", file($tempFilename));
+                          @unlink($tempFilename);
+                          break;
+                      }
                     }
+                    
                     // blank title so that it doesn't cause a big h3 
                     $block['subject'] = ''; 
-                    $block['content'] =  theme('datastream_block',array('datastream_contents' => $file_text));
+                    $block['content'] =  theme('datastream_block',array('datastream_contents' => $content));
                     return $block;
                 } catch (Exception $e) {
                     exit;

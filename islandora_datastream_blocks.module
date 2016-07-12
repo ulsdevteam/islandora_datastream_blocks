@@ -23,14 +23,12 @@ function islandora_datastream_blocks_menu () {
 function islandora_datastream_blocks_block_info() {
     $block_dsids = variable_get('islandora_datastream_blocks_block_dsids', '');
     $block_dsids_arr = explode(",", $block_dsids);
-    $b = array();
     foreach ($block_dsids_arr as $block_dsid) {
         $bid = trim($block_dsid);
         $blocks['idb-'.$bid] = array(  
             'info' => t('Islandora Datastream Block {'.$bid.'}'),
             'cache' => DRUPAL_CACHE_PER_PAGE,
         );
-        $b[] = $block_dsid;
     }
     return $blocks;
 }
@@ -46,8 +44,9 @@ function islandora_datastream_blocks_block_view($delta = '') {
         include_once('sites/all/modules/islandora/includes/tuque.inc');
 
         $item = menu_get_item();
-        if (isset($item['page_arguments'][0]) && is_object($item['page_arguments'][0]) && (get_class($item['page_arguments'][0]) == 'IslandoraFedoraObject')) {
-            $fedora_object = $item['page_arguments'][0];
+        if (isset($_SESSION['pid']) || (isset($item['page_arguments'][0]) && is_object($item['page_arguments'][0]) && (get_class($item['page_arguments'][0]) == 'IslandoraFedoraObject'))) {
+            $fedora_object = (isset($_SESSION['pid'])) ? islandora_object_load($_SESSION['pid']) : $item['page_arguments'][0];
+            unset($_SESSION['pid']);
             $connection = islandora_get_tuque_connection();
             if ($connection) {
                 try {

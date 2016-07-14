@@ -74,7 +74,12 @@ function islandora_datastream_blocks_block_view($delta = '') {
                         default:
                           $tempFilename = tempnam("/tmp", "DS_html_");
                           $datastream->getContent($tempFilename);
-                          $content = implode("", file($tempFilename));
+                          $lines = file($tempFilename);
+                          $content = '';
+                          foreach ($lines as $line) {
+                            $line = mb_ereg_replace('(\x92)', "'", $line);
+                            $content .= mb_convert_encoding($line, 'HTML-ENTITIES', "UTF-8");
+                          }
                           @unlink($tempFilename);
                           break;
                       }

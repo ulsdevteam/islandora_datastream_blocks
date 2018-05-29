@@ -46,7 +46,9 @@ function islandora_datastream_blocks_block_view($delta = '') {
         $item = menu_get_item();
         if (isset($_SESSION['pid']) || (isset($item['page_arguments'][0]) && is_object($item['page_arguments'][0]) && (get_class($item['page_arguments'][0]) == 'IslandoraFedoraObject'))) {
             $fedora_object = (isset($_SESSION['pid'])) ? islandora_object_load($_SESSION['pid']) : $item['page_arguments'][0];
-            unset($_SESSION['pid']);
+            if (isset($_SESSION['pid'])) {
+              unset($_SESSION['pid']);
+            }
             $connection = islandora_get_tuque_connection();
             if ($connection) {
                 try {
